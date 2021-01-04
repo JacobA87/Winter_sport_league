@@ -1,0 +1,57 @@
+﻿@page "/profile"
+
+@using Winter_sport_league_UI.Data
+@inject IPlayerService playerService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+<div>
+    <h1>Player profile</h1>
+    @if (@_player.Name != null) {
+        <h3>name: @_player.Name</h3>
+    }
+    else {
+        <EditForm Model="@_player" OnValidSubmit="@AddNewPlayerAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <InputText id="name" @bind-Value="_player.Name" />
+
+            <button type="submit">Submit</button>
+        </EditForm>
+    }
+</div>
+@code
+{
+    private Player _player = new Player();
+    private string _authMessage;
+    private string _surnameMessage;
+    private IEnumerable<Claim> _claims = Enumerable.Empty<Claim>();
+
+    protected override async Task OnInitializedAsync() {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated) {
+            _authMessage = $"{user.Identity.Name} is authenticated.";
+            _claims = user.Claims;
+            _surnameMessage =
+                $"Surname: {user.FindFirst(c => c.Type == ClaimTypes.Surname)?.Value}";
+        }
+
+        if (user != null) {
+            var player = await playerService.GetPlayerAsync(user.Claims);
+            if (player != null) {
+                _player = player;
+            }
+        }
+    }
+
+    private async Task AddNewPlayerAsync() {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        await playerService.AddPlayerAsync(_player, user.Claims);
+    }
+
+
+}
